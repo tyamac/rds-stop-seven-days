@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Stop Rds Instance longer than 7days.
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.9
+
+Resources:
+  RdsStartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: rds-start-function
+      CodeUri: function/
+      Handler: start.lambda_handler
+      Runtime: python3.9
+      Policies:
+        - !Ref RdsManagedActionPolicy
+      Events:
+        Schedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: 'cron(30 3 ? * SAT *)'
+            ScheduleExpressionTimezone: 'Asia/Tokyo'
+
+  RdsStopFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: rds-stop-function
+      CodeUri: function/
+      Handler: stop.lambda_handler
+      Runtime: python3.9
+      Policies:
+        - !Ref RdsManagedActionPolicy
+      Events:
+        Schedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: 'cron(30 5 ? * SUN *)'
+            ScheduleExpressionTimezone: 'Asia/Tokyo'
+
+  RdsManagedActionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - rds:StartDBCluster
+              - rds:StopDBCluster
+              - rds:ListTagsForResource
+              - rds:DescribeDBInstances
+              - rds:StopDBInstance
+              - rds:DescribeDBClusters
+              - rds:StartDBInstance
+            Resource: '*'
+
+
+Outputs:
+  RdsStartFunction:
+    Description: "rds-start-function Lambda Function ARN"
+    Value: !GetAtt RdsStartFunction.Arn
+  RdsStartFunctionIamRole:
+    Description: "Implicit IAM Role created for rds-start-function"
+    Value: !GetAtt RdsStartFunctionRole.Arn
+
+  RdsStopFunction:
+    Description: "rds-stop-function Lambda Function ARN"
+    Value: !GetAtt RdsStopFunction.Arn
+  RdsStopFunctionIamRole:
+    Description: "Implicit IAM Role created for rds-stop-function"
+    Value: !GetAtt RdsStopFunctionRole.Arn
